@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import { App } from "@slack/bolt";
 import { randomUUID } from "crypto";
-
+import { connectDB } from "./db.js";
+import { Todo } from "./models/Todo.js";
 dotenv.config();
 
 const app = new App({
@@ -10,7 +11,6 @@ const app = new App({
   socketMode: true,
 });
 
-const todos = {};
 const userFilters = {};
 // userFilters[userId] = "overdue" | "upcoming" | "inbox"
 
@@ -19,7 +19,7 @@ const getFilter = (userId) => userFilters[userId] || "inbox";
 app.event("app_home_opened", async ({ event, client }) => {
   await client.views.publish({
     user_id: event.user,
-    view: homeTabView(event.user),
+    view: await homeTabView(event.user),
   });
 });
 
@@ -53,28 +53,16 @@ app.view("create_todo", async ({ ack, body, view, client }) => {
   const assignee =
     view.state.values.todo_assign?.assignee?.selected_user || userId;
 
-  const todo = {
-    id: randomUUID(),
+  await Todo.create({
+    userId,
     text,
     dueDate,
     assignee,
-    completed: false,
-    completedAt: null,
-  };
-
-  if (!todos[userId]) todos[userId] = [];
-  todos[userId].push(todo);
-
-  // 1️⃣ Message tab (optional)
-  await client.chat.postMessage({
-    channel: userId,
-    text: "✅ Todo created",
   });
 
-  // 2️⃣ Home tab (IMPORTANT)
   await client.views.publish({
     user_id: userId,
-    view: homeTabView(userId),
+    view: await homeTabView(userId),
   });
 });
 
@@ -84,7 +72,9 @@ app.action("edit_todo", async ({ ack, body, client }) => {
 
   const todoId = body.actions[0].value;
   const userId = body.user.id;
-  const todo = todos[userId].find((t) => t.id === todoId);
+
+  const todo = await Todo.findOne({ _id: todoId, userId });
+  if (!todo) return;
 
   await client.views.open({
     trigger_id: body.trigger_id,
@@ -113,7 +103,7 @@ app.view("update_todo", async ({ ack, body, view, client }) => {
 
   await client.views.publish({
     user_id: userId,
-    view: homeTabView(userId),
+    view: await homeTabView(userId),
   });
 });
 
@@ -123,15 +113,14 @@ app.action("complete_todo", async ({ ack, body, client }) => {
   const userId = body.user.id;
   const todoId = body.actions[0].value;
 
-  const todo = todos[userId]?.find((t) => t.id === todoId);
-  if (!todo) return;
-
-  todo.completed = true;
-  todo.completedAt = new Date().toISOString();
+  await Todo.findOneAndUpdate(
+    { _id: todoId, userId },
+    { completed: true, completedAt: new Date() }
+  );
 
   await client.views.publish({
     user_id: userId,
-    view: homeTabView(userId),
+    view: await homeTabView(userId),
   });
 });
 
@@ -141,15 +130,11 @@ app.action("delete_todo", async ({ ack, body, client }) => {
   const userId = body.user.id;
   const todoId = body.actions[0].value;
 
-  if (!todos[userId]) return;
+  await Todo.deleteOne({ _id: todoId, userId });
 
-  // Remove todo
-  todos[userId] = todos[userId].filter((t) => t.id !== todoId);
-
-  // Refresh Home tab
   await client.views.publish({
     user_id: userId,
-    view: homeTabView(userId),
+    view: await homeTabView(userId),
   });
 });
 
@@ -163,7 +148,7 @@ app.action("change_filter", async ({ ack, body, client }) => {
 
   await client.views.publish({
     user_id: userId,
-    view: homeTabView(userId),
+    view: await homeTabView(userId),
   });
 });
 
@@ -247,7 +232,7 @@ const newTodoModal = () => ({
 const editTodoModal = (todo) => ({
   type: "modal",
   callback_id: "update_todo",
-  private_metadata: todo.id,
+  private_metadata: todo._id.toString(),
   title: { type: "plain_text", text: "Edit ToDo" },
   submit: { type: "plain_text", text: "Update" },
   close: { type: "plain_text", text: "Cancel" },
@@ -265,7 +250,7 @@ const editTodoModal = (todo) => ({
       element: {
         type: "plain_text_input",
         action_id: "text_input",
-        initial_value: todo.text,
+        initial_value: todo.text || "",
         multiline: true,
       },
       label: { type: "plain_text", text: "ToDo text" },
@@ -277,7 +262,7 @@ const editTodoModal = (todo) => ({
       element: {
         type: "users_select",
         action_id: "assignee",
-        initial_user: todo.assignee,
+        ...(todo.assignee ? { initial_user: todo.assignee } : {}),
       },
       label: { type: "plain_text", text: "Assigned to" },
     },
@@ -288,7 +273,7 @@ const editTodoModal = (todo) => ({
       element: {
         type: "datepicker",
         action_id: "due_date",
-        initial_date: todo.dueDate || undefined,
+        ...(todo.dueDate ? { initial_date: todo.dueDate } : {}),
       },
       label: { type: "plain_text", text: "Due date" },
     },
@@ -300,8 +285,13 @@ const isOverdue = (todo) => {
   return new Date(todo.dueDate) < new Date();
 };
 
-const homeTabView = (userId) => {
-  const userTodos = todos[userId] || [];
+const homeTabView = async (userId) => {
+  // const userTodos = todos[userId] || [];
+
+  const userTodos = await Todo.find({ userId }).sort({
+    completed: 1,
+    dueDate: 1,
+  });
 
   const openTodos = userTodos.filter((t) => !t.completed);
   const completedTodos = userTodos.filter((t) => t.completed);
@@ -493,6 +483,7 @@ const homeTabView = (userId) => {
 
 /* -------------------- START APP -------------------- */
 (async () => {
+  await connectDB();
   await app.start();
   console.log("⚡️ TodoBot is running (Socket Mode)");
 })();
