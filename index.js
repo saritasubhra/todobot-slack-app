@@ -7,8 +7,7 @@ dotenv.config();
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  appToken: process.env.SLACK_APP_TOKEN,
-  socketMode: true,
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
 
 const userFilters = {};
@@ -484,6 +483,6 @@ const homeTabView = async (userId) => {
 /* -------------------- START APP -------------------- */
 (async () => {
   await connectDB();
-  await app.start();
+  await app.start(process.env.PORT || 3000);
   console.log("⚡️ TodoBot is running (Socket Mode)");
 })();
