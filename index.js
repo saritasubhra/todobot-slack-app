@@ -1,24 +1,22 @@
 import dotenv from "dotenv";
-import { App } from "@slack/bolt";
+import { App, ExpressReceiver } from "@slack/bolt";
 import { randomUUID } from "crypto";
 import { connectDB } from "./db.js";
 import { Todo } from "./models/Todo.js";
 dotenv.config();
 
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
+const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
 
-// 👇 ADD THIS BELOW app initialization
-const expressApp = app.receiver.app;
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver,
+});
 
-// OAuth redirect route (Slack redirects here after "Allow")
-expressApp.get("/slack/oauth_redirect", (req, res) => {
-  res.send(`
-    <h2>✅ TodoApp installed successfully</h2>
-    <p>You can close this window and return to Slack.</p>
-  `);
+// 👇 ADD THIS BELOW app initialization
+receiver.app.get("/slack/oauth_redirect", (req, res) => {
+  res.send("✅ TodoApp installed successfully. You can close this window.");
 });
 
 const userFilters = {};
