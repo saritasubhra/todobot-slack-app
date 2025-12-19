@@ -10,6 +10,17 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
 
+// 👇 ADD THIS BELOW app initialization
+const expressApp = app.receiver.app;
+
+// OAuth redirect route (Slack redirects here after "Allow")
+expressApp.get("/slack/oauth_redirect", (req, res) => {
+  res.send(`
+    <h2>✅ TodoApp installed successfully</h2>
+    <p>You can close this window and return to Slack.</p>
+  `);
+});
+
 const userFilters = {};
 // userFilters[userId] = "overdue" | "upcoming" | "inbox"
 
