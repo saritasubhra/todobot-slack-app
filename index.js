@@ -52,6 +52,7 @@ const receiver = new ExpressReceiver({
   },
   installerOptions: {
     directInstall: true,
+    stateVerification: false,
   },
 });
 
