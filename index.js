@@ -3,10 +3,15 @@ import pkg from "@slack/bolt";
 
 import { randomUUID } from "crypto";
 import { connectDB } from "./db.js";
+import { Installation } from "./models/Installation.js";
 import { Todo } from "./models/Todo.js";
 dotenv.config();
 
-const { App } = pkg;
+const { App, ExpressReceiver } = pkg;
+
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+});
 
 const app = new App({
   receiver,
@@ -128,12 +133,15 @@ app.view("update_todo", async ({ ack, body, view, client }) => {
   const userId = body.user.id;
   const todoId = view.private_metadata;
 
-  const todo = todos[userId].find((t) => t.id === todoId);
-
-  todo.text = view.state.values.todo_text.text_input.value;
-  todo.dueDate = view.state.values.todo_due?.due_date?.selected_date || null;
-  todo.assignee =
-    view.state.values.todo_assign?.assignee?.selected_user || userId;
+  await Todo.findOneAndUpdate(
+    { _id: todoId, userId },
+    {
+      text: view.state.values.todo_text.text_input.value,
+      dueDate: view.state.values.todo_due?.due_date?.selected_date || null,
+      assignee:
+        view.state.values.todo_assign?.assignee?.selected_user || userId,
+    }
+  );
 
   await client.chat.postMessage({
     channel: userId,
@@ -524,5 +532,5 @@ const homeTabView = async (userId) => {
 (async () => {
   await connectDB();
   await app.start(process.env.PORT || 3000);
-  console.log("⚡️ TodoBot is running (Socket Mode)");
+  console.log("⚡️ TodoBot is running");
 })();
