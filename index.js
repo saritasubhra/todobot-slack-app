@@ -9,6 +9,22 @@ dotenv.config();
 
 const { App, ExpressReceiver } = pkg;
 
+const requiredEnv = [
+  "SLACK_SIGNING_SECRET",
+  "SLACK_CLIENT_ID",
+  "SLACK_CLIENT_SECRET",
+  "STATE_SECRET",
+];
+
+requiredEnv.forEach((name) => {
+  if (!process.env[name]) {
+    console.error(
+      `❌ CRITICAL ERROR: Environment variable ${name} is missing!`
+    );
+    process.exit(1); // Force the app to stop so you can see the error
+  }
+});
+
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   clientId: process.env.SLACK_CLIENT_ID,
