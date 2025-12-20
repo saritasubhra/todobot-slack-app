@@ -9,39 +9,51 @@ dotenv.config();
 
 const { App, ExpressReceiver } = pkg;
 
+console.log(process.env.SLACK_SIGNING_SECRET);
+console.log(process.env.SLACK_CLIENT_ID);
+console.log(process.env.SLACK_CLIENT_SECRET);
+console.log(process.env.STATE_SECRET);
+
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
+});
+
+// 2. Initialize the App with all OAuth credentials
+const app = new App({
+  receiver,
+  signingSecret: process.env.SLACK_SIGNING_SECRET, // ✅ REQUIRED
   clientId: process.env.SLACK_CLIENT_ID,
   clientSecret: process.env.SLACK_CLIENT_SECRET,
   stateSecret: process.env.STATE_SECRET,
+
   scopes: ["commands", "chat:write", "app_home:opened", "users:read"],
+
   installationStore: {
     storeInstallation: async (installation) => {
-      if (installation.team) {
-        return await Installation.findOneAndUpdate(
-          { teamId: installation.team.id },
-          { teamId: installation.team.id, installation },
-          { upsert: true }
-        );
+      if (!installation.team) {
+        throw new Error("No team information");
       }
-      throw new Error("Failed saving installation");
+      return Installation.findOneAndUpdate(
+        { teamId: installation.team.id },
+        { teamId: installation.team.id, installation },
+        { upsert: true }
+      );
     },
+
     fetchInstallation: async (installQuery) => {
       const record = await Installation.findOne({
         teamId: installQuery.teamId,
       });
-      if (!record) throw new Error("Installation not found");
+      if (!record) {
+        throw new Error("Installation not found");
+      }
       return record.installation;
     },
   },
+
   installerOptions: {
     directInstall: true,
   },
-});
-
-// 2. Simply pass the configured receiver to the App
-const app = new App({
-  receiver,
 });
 
 // 👇 ADD THIS BELOW app initialization
