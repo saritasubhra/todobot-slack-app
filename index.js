@@ -11,17 +11,10 @@ const { App, ExpressReceiver } = pkg;
 
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
-});
-
-const app = new App({
-  receiver,
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
   clientId: process.env.SLACK_CLIENT_ID,
   clientSecret: process.env.SLACK_CLIENT_SECRET,
-  stateSecret: process.env.STATE_SECRET,
-
+  stateSecret: process.env.STATE_SECRET || "a-very-secret-value",
   scopes: ["commands", "chat:write", "app_home:opened", "users:read"],
-
   installationStore: {
     storeInstallation: async (installation) => {
       if (installation.team) {
@@ -33,7 +26,6 @@ const app = new App({
       }
       throw new Error("Failed saving installation");
     },
-
     fetchInstallation: async (installQuery) => {
       const result = await Installation.findOne({
         teamId: installQuery.teamId,
@@ -44,10 +36,14 @@ const app = new App({
       return result.installation;
     },
   },
-
   installerOptions: {
     directInstall: true,
   },
+});
+
+// Pass the fully configured receiver to the App
+const app = new App({
+  receiver,
 });
 
 // 👇 ADD THIS BELOW app initialization
