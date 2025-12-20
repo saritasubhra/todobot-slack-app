@@ -6,14 +6,43 @@ import { connectDB } from "./db.js";
 import { Todo } from "./models/Todo.js";
 dotenv.config();
 
-const { App, ExpressReceiver } = pkg;
-const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-});
+const { App } = pkg;
 
 const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
   receiver,
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  clientId: process.env.SLACK_CLIENT_ID,
+  clientSecret: process.env.SLACK_CLIENT_SECRET,
+  stateSecret: process.env.STATE_SECRET,
+
+  scopes: ["commands", "chat:write", "app_home:opened", "users:read"],
+
+  installationStore: {
+    storeInstallation: async (installation) => {
+      if (installation.team) {
+        return await Installation.findOneAndUpdate(
+          { teamId: installation.team.id },
+          { teamId: installation.team.id, installation },
+          { upsert: true }
+        );
+      }
+      throw new Error("Failed saving installation");
+    },
+
+    fetchInstallation: async (installQuery) => {
+      const result = await Installation.findOne({
+        teamId: installQuery.teamId,
+      });
+      if (!result) {
+        throw new Error("No installation found");
+      }
+      return result.installation;
+    },
+  },
+
+  installerOptions: {
+    directInstall: true,
+  },
 });
 
 // 👇 ADD THIS BELOW app initialization
