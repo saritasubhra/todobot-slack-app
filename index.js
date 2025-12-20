@@ -1,10 +1,12 @@
 import dotenv from "dotenv";
-import { App, ExpressReceiver } from "@slack/bolt";
+import pkg from "@slack/bolt";
+
 import { randomUUID } from "crypto";
 import { connectDB } from "./db.js";
 import { Todo } from "./models/Todo.js";
 dotenv.config();
 
+const { App, ExpressReceiver } = pkg;
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
