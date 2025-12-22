@@ -9,10 +9,10 @@ dotenv.config();
 
 const { App, ExpressReceiver } = pkg;
 
-console.log(process.env.SLACK_SIGNING_SECRET);
-console.log(process.env.SLACK_CLIENT_ID);
-console.log(process.env.SLACK_CLIENT_SECRET);
-console.log(process.env.STATE_SECRET);
+// console.log(process.env.SLACK_SIGNING_SECRET);
+// console.log(process.env.SLACK_CLIENT_ID);
+// console.log(process.env.SLACK_CLIENT_SECRET);
+// console.log(process.env.STATE_SECRET);
 
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
