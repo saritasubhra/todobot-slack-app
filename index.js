@@ -55,6 +55,7 @@ const receiver = new ExpressReceiver({
   installerOptions: {
     directInstall: true,
     stateVerification: false,
+    redirectUriPath: "/slack/oauth_redirect",
   },
 });
 
