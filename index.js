@@ -30,7 +30,7 @@ const receiver = new ExpressReceiver({
   clientId: process.env.SLACK_CLIENT_ID,
   clientSecret: process.env.SLACK_CLIENT_SECRET,
   stateSecret: process.env.STATE_SECRET,
-  scopes: ["commands", "chat:write", "app_home:opened", "users:read"],
+  scopes: ["commands", "chat:write", "app_mentions:read", "users:read"],
   redirectUri:
     "https://todobot-slack-app-production.up.railway.app/slack/oauth_redirect",
   installationStore: {
