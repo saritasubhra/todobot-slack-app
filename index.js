@@ -31,6 +31,8 @@ const receiver = new ExpressReceiver({
   clientSecret: process.env.SLACK_CLIENT_SECRET,
   stateSecret: process.env.STATE_SECRET,
   scopes: ["commands", "chat:write", "app_home:opened", "users:read"],
+  redirectUri:
+    "https://todobot-slack-app-production.up.railway.app/slack/oauth_redirect",
   installationStore: {
     storeInstallation: async (installation) => {
       if (installation.team) {
@@ -62,9 +64,9 @@ const app = new App({
 });
 
 // 👇 ADD THIS BELOW app initialization
-receiver.app.get("/slack/oauth_redirect", (req, res) => {
-  res.send("✅ TodoApp installed successfully. You can close this window.");
-});
+// receiver.app.get("/slack/oauth_redirect", (req, res) => {
+//   res.send("✅ TodoApp installed successfully. You can close this window.");
+// });
 
 const userFilters = {};
 // userFilters[userId] = "overdue" | "upcoming" | "inbox"
